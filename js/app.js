@@ -121,6 +121,54 @@ const app = {
       desc: '三角洲行动随机配装器！地图、干员、枪械全随机，准备出击！',
       tags: ['随机', '配装'],
       module: DeltaGame
+    },
+    {
+      id: 'bubble',
+      name: '泡泡射手',
+      icon: '🫧',
+      desc: '经典泡泡龙！瞄准射击，消除3个同色泡泡！',
+      tags: ['经典', 'Flash'],
+      module: BubbleGame
+    },
+    {
+      id: 'invaders',
+      name: '太空侵略者',
+      icon: '👾',
+      desc: '经典街机射击！消灭外星舰队，保卫地球！',
+      tags: ['街机', '射击'],
+      module: InvadersGame
+    },
+    {
+      id: 'wordle',
+      name: '猜单词',
+      icon: '🔤',
+      desc: '6次机会猜出5字母英文单词，字母变色提示！',
+      tags: ['单词', '推理'],
+      module: WordleGame
+    },
+    {
+      id: 'simon',
+      name: '记忆灯',
+      icon: '💡',
+      desc: '记住灯光顺序并重复，越来越长挑战极限！',
+      tags: ['记忆', '挑战'],
+      module: SimonGame
+    },
+    {
+      id: 'whack',
+      name: '打地鼠',
+      icon: '🐹',
+      desc: '30秒限时打地鼠，眼疾手快越多越好！',
+      tags: ['反应', '休闲'],
+      module: WhackGame
+    },
+    {
+      id: 'match3',
+      name: '宝石消消乐',
+      icon: '💎',
+      desc: '交换相邻宝石，3个以上连线消除，连锁连击！',
+      tags: ['消除', '策略'],
+      module: Match3Game
     }
   ],
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>益智小游戏</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo">🎮</span>
+      <h1>益智小游戏</h1>
+    </div>
+    <button class="btn-back" id="backBtn" style="display:none">← 返回</button>
+  </header>
+
+  <main id="mainContent">
+    <!-- Home page - game grid -->
+    <div id="homePage" class="home-page">
+      <div class="hero">
+        <h2>选择一个游戏开始吧！</h2>
+        <p>休闲放松，锻炼思维</p>
+      </div>
+      <div class="game-grid" id="gameGrid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Game container -->
+    <div id="gamePage" class="game-page" style="display:none">
+      <div class="game-header" id="gameHeader">
+        <h2 id="gameTitle"></h2>
+        <div class="game-controls" id="gameControls"></div>
+      </div>
+      <div class="game-area" id="gameArea">
+        <!-- Each game renders here -->
+      </div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>益智小游戏合集 - 随时来玩！</p>
+  </footer>
+</div>
+
+<script src="js/games/memory.js"></script>
+<script src="js/games/snake.js"></script>
+<script src="js/games/2048.js"></script>
+<script src="js/games/minesweeper.js"></script>
+<script src="js/games/puzzle.js"></script>
+<script src="js/games/tetris.js"></script>
+<script src="js/games/tictactoe.js"></script>
+<script src="js/games/numberguess.js"></script>
+<script src="js/games/breakout.js"></script>
+<script src="js/games/reaction.js"></script>
+<script src="js/games/sudoku.js"></script>
+<script src="js/games/flappy.js"></script>
+<script src="js/games/fruitcatch.js"></script>
+<script src="js/games/colormatch.js"></script>
+<script src="js/games/delta.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

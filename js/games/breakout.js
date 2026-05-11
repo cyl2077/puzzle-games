@@ -53,6 +53,8 @@ const BreakoutGame = {
     this.updateStats();
     document.addEventListener('keydown', this.handleKey);
     document.addEventListener('mousemove', this.handleMouse);
+    this.canvas.addEventListener('touchmove', this.handleTouch, {passive:false});
+    this.canvas.addEventListener('touchstart', this.handleTouch, {passive:false});
     this.loop = setInterval(() => this.tick(), 16);
   },
 
@@ -65,6 +67,13 @@ const BreakoutGame = {
   handleMouse(e) {
     const rect = BreakoutGame.canvas.getBoundingClientRect();
     BreakoutGame.paddle.x = e.clientX - rect.left - BreakoutGame.paddle.w / 2;
+    BreakoutGame.paddle.x = Math.max(0, Math.min(BreakoutGame.width - BreakoutGame.paddle.w, BreakoutGame.paddle.x));
+  },
+
+  handleTouch(e) {
+    e.preventDefault();
+    const rect = BreakoutGame.canvas.getBoundingClientRect();
+    BreakoutGame.paddle.x = e.touches[0].clientX - rect.left - BreakoutGame.paddle.w / 2;
     BreakoutGame.paddle.x = Math.max(0, Math.min(BreakoutGame.width - BreakoutGame.paddle.w, BreakoutGame.paddle.x));
   },
 

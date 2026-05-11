@@ -524,3 +524,54 @@ canvas.game-canvas {
 @media (max-width: 600px) {
   .wordle-cell { width: 40px; height: 40px; font-size: 18px; }
 }
+
+/* === D-Pad (Snake) === */
+.dpad {
+  display: grid;
+  grid-template-areas: ". up ." "left . right" ". down .";
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 4px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.dpad-btn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 22px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.dpad-btn:active { background: var(--accent); }
+.dpad-up { grid-area: up; }
+.dpad-down { grid-area: down; }
+.dpad-left { grid-area: left; }
+.dpad-right { grid-area: right; }
+
+/* === Tetris Controls === */
+.tetris-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.tet-btn {
+  flex: 1;
+  min-width: 48px;
+  padding: 12px 8px !important;
+  font-size: 18px !important;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Hide D-pad & tetris controls on desktop, show on touch */
+@media (hover: hover) and (pointer: fine) {
+  .dpad { display: none; }
+  .tetris-controls { display: none; }
+}

@@ -5,18 +5,24 @@ const Game2048 = {
   container: null,
   statsCb: null,
   boardEl: null,
+  touchStart: null,
 
   init(container, statsCb) {
     this.container = container;
     this.statsCb = statsCb;
     this.score = 0;
+    this.touchStart = null;
     this.grid = Array.from({ length: 4 }, () => Array(4).fill(0));
     this.render();
     this.spawn();
     this.spawn();
     this.updateBoard();
     this.updateStats();
-    document.addEventListener('keydown', this.handleKey);
+    document.addEventListener('keydown', this._handleKey);
+    this.boardEl.addEventListener('touchstart', this._touchStart, {passive:false});
+    this.boardEl.addEventListener('touchend', this._touchEnd, {passive:false});
+    this.boardEl.addEventListener('mousedown', this._mouseDown);
+    this.boardEl.addEventListener('mouseup', this._mouseUp);
   },
 
   render() {
@@ -51,31 +57,60 @@ const Game2048 = {
   },
 
   updateStats() {
-    if (this.statsCb) {
-      this.statsCb({ '得分': this.score });
+    if (this.statsCb) this.statsCb({ '得分': this.score });
+  },
+
+  doMove(dir) {
+    let moved = false;
+    const old = this.grid.map(r => [...r]);
+    if (dir === 'up') moved = this.moveUp();
+    else if (dir === 'down') moved = this.moveDown();
+    else if (dir === 'left') moved = this.moveLeft();
+    else if (dir === 'right') moved = this.moveRight();
+    else return;
+    if (moved) {
+      this.spawn();
+      this.updateBoard();
+      this.updateStats();
+      if (this.checkWin()) {
+        this.showResult('🎉 你赢了！达到 2048！');
+      } else if (this.checkLose()) {
+        this.showResult('游戏结束！没有可移动的了');
+      }
     }
   },
 
-  handleKey(e) {
-    const key = e.key;
-    let moved = false;
-    const old = Game2048.grid.map(r => [...r]);
+  _handleKey(e) {
+    const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+    if (map[e.key]) { e.preventDefault(); Game2048.doMove(map[e.key]); }
+  },
 
-    if (key === 'ArrowUp') moved = Game2048.moveUp();
-    else if (key === 'ArrowDown') moved = Game2048.moveDown();
-    else if (key === 'ArrowLeft') moved = Game2048.moveLeft();
-    else if (key === 'ArrowRight') moved = Game2048.moveRight();
-    else return;
+  _touchStart(e) { e.preventDefault(); Game2048.touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }; },
+  _touchEnd(e) {
+    e.preventDefault();
+    if (!Game2048.touchStart) return;
+    const dx = e.changedTouches[0].clientX - Game2048.touchStart.x;
+    const dy = e.changedTouches[0].clientY - Game2048.touchStart.y;
+    Game2048.touchStart = null;
+    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      Game2048.doMove(dx > 0 ? 'right' : 'left');
+    } else {
+      Game2048.doMove(dy > 0 ? 'down' : 'up');
+    }
+  },
 
-    if (moved) {
-      Game2048.spawn();
-      Game2048.updateBoard();
-      Game2048.updateStats();
-      if (Game2048.checkWin()) {
-        Game2048.showResult('🎉 你赢了！达到 2048！');
-      } else if (Game2048.checkLose()) {
-        Game2048.showResult('游戏结束！没有可移动的了');
-      }
+  _mouseDown(e) { Game2048.touchStart = { x: e.clientX, y: e.clientY }; },
+  _mouseUp(e) {
+    if (!Game2048.touchStart) return;
+    const dx = e.clientX - Game2048.touchStart.x;
+    const dy = e.clientY - Game2048.touchStart.y;
+    Game2048.touchStart = null;
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      Game2048.doMove(dx > 0 ? 'right' : 'left');
+    } else {
+      Game2048.doMove(dy > 0 ? 'down' : 'up');
     }
   },
 
@@ -84,7 +119,7 @@ const Game2048 = {
     for (let i = 0; i < filtered.length - 1; i++) {
       if (filtered[i] === filtered[i + 1]) {
         filtered[i] *= 2;
-        Game2048.score += filtered[i];
+        this.score += filtered[i];
         filtered.splice(i + 1, 1);
       }
     }
@@ -92,57 +127,12 @@ const Game2048 = {
     return filtered;
   },
 
-  moveLeft() {
-    let moved = false;
-    for (let r = 0; r < 4; r++) {
-      const oldRow = [...this.grid[r]];
-      this.grid[r] = this.slide(oldRow);
-      if (oldRow.join(',') !== this.grid[r].join(',')) moved = true;
-    }
-    return moved;
-  },
+  moveLeft() { let moved=false; for(let r=0;r<4;r++){const old=[...this.grid[r]];this.grid[r]=this.slide(old);if(old.join()!==this.grid[r].join())moved=true;} return moved; },
+  moveRight() { let moved=false; for(let r=0;r<4;r++){const old=[...this.grid[r]];const rev=this.slide([...old].reverse()).reverse();this.grid[r]=rev;if(old.join()!==rev.join())moved=true;} return moved; },
+  moveUp() { let moved=false; for(let c=0;c<4;c++){const old=[this.grid[0][c],this.grid[1][c],this.grid[2][c],this.grid[3][c]];const slided=this.slide(old);for(let r=0;r<4;r++){if(this.grid[r][c]!==slided[r])moved=true;this.grid[r][c]=slided[r];}} return moved; },
+  moveDown() { let moved=false; for(let c=0;c<4;c++){const old=[this.grid[0][c],this.grid[1][c],this.grid[2][c],this.grid[3][c]];const slided=this.slide([...old].reverse()).reverse();for(let r=0;r<4;r++){if(this.grid[r][c]!==slided[r])moved=true;this.grid[r][c]=slided[r];}} return moved; },
 
-  moveRight() {
-    let moved = false;
-    for (let r = 0; r < 4; r++) {
-      const oldRow = [...this.grid[r]];
-      const rev = this.slide([...oldRow].reverse()).reverse();
-      this.grid[r] = rev;
-      if (oldRow.join(',') !== rev.join(',')) moved = true;
-    }
-    return moved;
-  },
-
-  moveUp() {
-    let moved = false;
-    for (let c = 0; c < 4; c++) {
-      const oldCol = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]];
-      const slided = this.slide(oldCol);
-      for (let r = 0; r < 4; r++) {
-        if (this.grid[r][c] !== slided[r]) moved = true;
-        this.grid[r][c] = slided[r];
-      }
-    }
-    return moved;
-  },
-
-  moveDown() {
-    let moved = false;
-    for (let c = 0; c < 4; c++) {
-      const oldCol = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]];
-      const slided = this.slide([...oldCol].reverse()).reverse();
-      for (let r = 0; r < 4; r++) {
-        if (this.grid[r][c] !== slided[r]) moved = true;
-        this.grid[r][c] = slided[r];
-      }
-    }
-    return moved;
-  },
-
-  checkWin() {
-    return this.grid.some(r => r.some(c => c === 2048));
-  },
-
+  checkWin() { return this.grid.some(r => r.some(c => c === 2048)); },
   checkLose() {
     for (let r = 0; r < 4; r++)
       for (let c = 0; c < 4; c++) {
@@ -154,23 +144,16 @@ const Game2048 = {
   },
 
   showResult(msg) {
-    document.removeEventListener('keydown', this.handleKey);
+    document.removeEventListener('keydown', this._handleKey);
     const div = document.createElement('div');
     div.className = 'game-over-overlay';
-    div.innerHTML = `
-      <h3>${msg}</h3>
-      <p>最终得分: ${this.score}</p>
-      <button class="btn" id="replayBtn">再来一局</button>
-    `;
+    div.innerHTML = `<h3>${msg}</h3><p>最终得分: ${this.score}</p><button class="btn" id="replayBtn">再来一局</button>`;
     this.container.style.position = 'relative';
     this.container.appendChild(div);
-    document.getElementById('replayBtn').addEventListener('click', () => {
-      this.destroy();
-      this.init(this.container, this.statsCb);
-    });
+    document.getElementById('replayBtn').addEventListener('click', () => { this.destroy(); this.init(this.container, this.statsCb); });
   },
 
   destroy() {
-    document.removeEventListener('keydown', this.handleKey);
+    document.removeEventListener('keydown', this._handleKey);
   }
 };

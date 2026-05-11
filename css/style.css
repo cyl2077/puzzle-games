@@ -175,12 +175,14 @@ html, body {
 /* === Memory Game === */
 .memory-grid {
   display: grid;
-  grid-template-columns: repeat(4, 80px);
-  grid-template-rows: repeat(4, 80px);
   gap: 8px;
+  justify-content: center;
+  justify-items: stretch;
 }
 
 .memory-card {
+  width: 72px;
+  height: 72px;
   background: var(--surface2);
   border: 2px solid var(--border);
   border-radius: 10px;
@@ -347,12 +349,7 @@ canvas.game-canvas {
   .game-grid { grid-template-columns: 1fr; }
   .game-area { padding: 16px; }
 
-  .memory-grid {
-    grid-template-columns: repeat(4, 70px);
-    grid-template-rows: repeat(4, 70px);
-    gap: 6px;
-  }
-  .memory-card { font-size: 28px; }
+  .memory-card { width: 58px; height: 58px; font-size: 24px; }
 
   .puzzle-grid {
     grid-template-columns: repeat(4, 60px);

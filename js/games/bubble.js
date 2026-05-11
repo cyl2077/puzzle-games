@@ -104,10 +104,16 @@ const BubbleGame = {
   },
 
   spawnBubble() {
+    // Only pick colors that still exist on the grid (or any if grid is empty)
+    let pool = this.colors;
+    if (this.bubbles.length > 0) {
+      const remainingColors = [...new Set(this.bubbles.map(b => b.color))];
+      if (remainingColors.length > 0) pool = remainingColors;
+    }
     this.currentBubble = {
       x: this.shooter.x, y: this.shooter.y,
       r: this.radius,
-      color: this.colors[Math.floor(Math.random() * this.colors.length)],
+      color: pool[Math.floor(Math.random() * pool.length)],
       vx: 0, vy: 0, active: true, shooting: false
     };
   },

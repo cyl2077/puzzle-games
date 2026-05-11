@@ -1,4 +1,4 @@
-// === Snake Game ===
+// === Snake Game (贪吃蛇) - 5 关闯关模式 ===
 const SnakeGame = {
   canvas: null, ctx: null,
   tileCount: 20, tileSize: 0,
@@ -8,33 +8,59 @@ const SnakeGame = {
   loop: null, running: false,
   container: null, statsCb: null,
   touchStart: null,
+  level: 1, maxLevel: 5,
+  targetScore: 50,
+  levelConfigs: [
+    { target: 50, speed: 100, name: '新手入门' },
+    { target: 100, speed: 85, name: '渐入佳境' },
+    { target: 150, speed: 70, name: '速度挑战' },
+    { target: 200, speed: 55, name: '极限反应' },
+    { target: 300, speed: 45, name: '蛇王之路' },
+  ],
 
   init(container, statsCb) {
     this.container = container;
     this.statsCb = statsCb;
     this.snake = [{ x: 10, y: 10 }];
-    this.dir = { x: 1, y: 0 };
-    this.nextDir = { x: 1, y: 0 };
-    this.score = 0; this.speed = 100;
+    this.dir = { x: 1, y: 0 }; this.nextDir = { x: 1, y: 0 };
+    this.score = 0; this.level = 1;
+    const cfg = this.levelConfigs[0];
+    this.speed = cfg.speed; this.targetScore = cfg.target;
     this.running = true; this.touchStart = null;
 
-    const size = Math.min(400, container.clientWidth - 48);
+    const size = Math.min(400, this.container.clientWidth - 48);
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'game-canvas';
     this.canvas.width = size; this.canvas.height = size;
     this.ctx = this.canvas.getContext('2d');
     this.tileSize = size / this.tileCount;
 
-    container.innerHTML = '';
-    container.appendChild(this.canvas);
-    container.appendChild(this.buildDPad());
+    this.container.innerHTML = '';
+    this.container.appendChild(this.canvas);
+    this.container.appendChild(this.buildDPad());
     this.spawnFood();
-    this.updateStats();
+    this.showLevelIntro(() => {
+      this.updateStats();
+      document.addEventListener('keydown', this._handleKey);
+      this.canvas.addEventListener('touchstart', this._touchStart, {passive:false});
+      this.canvas.addEventListener('touchend', this._touchEnd, {passive:false});
+      this.loop = setInterval(() => this.tick(), this.speed);
+    });
+  },
 
-    document.addEventListener('keydown', this._handleKey);
-    this.canvas.addEventListener('touchstart', this._touchStart, {passive:false});
-    this.canvas.addEventListener('touchend', this._touchEnd, {passive:false});
-    this.loop = setInterval(() => this.tick(), this.speed);
+  showLevelIntro(cb) {
+    this.running = false;
+    const cfg = this.levelConfigs[this.level - 1];
+    const div = document.createElement('div');
+    div.className = 'level-intro';
+    div.innerHTML = `<div class="level-num">第 ${this.level} 关</div><div class="level-title">${cfg.name} · 目标 ${cfg.target} 分</div>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    setTimeout(() => {
+      if (div.parentNode) div.remove();
+      this.running = true;
+      cb();
+    }, 1500);
   },
 
   _handleKey(e) {
@@ -46,7 +72,7 @@ const SnakeGame = {
   },
 
   setDir(dx, dy) {
-    if (this.dir.x === -dx && this.dir.y === -dy) return; // no 180 turn
+    if (this.dir.x === -dx && this.dir.y === -dy) return;
     this.nextDir = { x: dx, y: dy };
   },
 
@@ -89,8 +115,14 @@ const SnakeGame = {
     if (this.snake.some(s => s.x === newHead.x && s.y === newHead.y)) { this.gameOver(); return; }
     this.snake.unshift(newHead);
     if (newHead.x === this.food.x && newHead.y === this.food.y) {
-      this.score += 10; this.updateStats(); this.spawnFood();
-      if (this.speed > 40) { this.speed -= 2; clearInterval(this.loop); this.loop = setInterval(() => this.tick(), this.speed); }
+      this.score += 10; this.updateStats();
+      if (this.score >= this.targetScore) {
+        if (this.level >= this.maxLevel) { this.gameOver(true); return; }
+        this.levelUp();
+        return;
+      }
+      this.spawnFood();
+      if (this.speed > 35) { this.speed -= 2; clearInterval(this.loop); this.loop = setInterval(() => this.tick(), this.speed); }
     } else { this.snake.pop(); }
     this.draw();
   },
@@ -98,6 +130,28 @@ const SnakeGame = {
   spawnFood() {
     do { this.food = { x: Math.floor(Math.random() * this.tileCount), y: Math.floor(Math.random() * this.tileCount) }; }
     while (this.snake.some(s => s.x === this.food.x && s.y === this.food.y));
+  },
+
+  levelUp() {
+    clearInterval(this.loop);
+    this.running = false;
+    const div = document.createElement('div');
+    div.className = 'level-intro';
+    div.innerHTML = `<div class="level-num">✅ 第 ${this.level} 关通过！</div><div class="level-title">准备进入第 ${this.level + 1} 关</div>`;
+    this.container.appendChild(div);
+    setTimeout(() => {
+      if (div.parentNode) div.remove();
+      this.level++;
+      const cfg = this.levelConfigs[this.level - 1];
+      this.speed = cfg.speed; this.targetScore = cfg.target;
+      this.snake = [{ x: 10, y: 10 }];
+      this.dir = { x: 1, y: 0 }; this.nextDir = { x: 1, y: 0 };
+      this.spawnFood();
+      this.showLevelIntro(() => {
+        this.updateStats();
+        this.loop = setInterval(() => this.tick(), this.speed);
+      });
+    }, 1800);
   },
 
   draw() {
@@ -111,14 +165,18 @@ const SnakeGame = {
     });
   },
 
-  updateStats() { if (this.statsCb) this.statsCb({ '得分': this.score, '长度': this.snake.length }); },
+  updateStats() {
+    if (this.statsCb) this.statsCb({ '关卡': `${this.level}/${this.maxLevel}`, '得分': `${this.score}/${this.targetScore}`, '长度': this.snake.length });
+  },
 
-  gameOver() {
+  gameOver(won = false) {
     this.running = false; clearInterval(this.loop);
     document.removeEventListener('keydown', this._handleKey);
     const div = document.createElement('div');
     div.className = 'game-over-overlay';
-    div.innerHTML = `<h3>游戏结束！</h3><p>得分: ${this.score} | 长度: ${this.snake.length}</p><button class="btn" id="replayBtn">再来一局</button>`;
+    div.innerHTML = won
+      ? `<h3>🎉 恭喜通关！</h3><p>通过了全部 ${this.maxLevel} 关！最终得分: ${this.score}</p><button class="btn" id="replayBtn">再来一局</button>`
+      : `<h3>游戏结束！</h3><p>第 ${this.level}/${this.maxLevel} 关 | 得分: ${this.score}/${this.targetScore} | 长度: ${this.snake.length}</p><button class="btn" id="replayBtn">再来一局</button>`;
     this.container.style.position = 'relative';
     this.container.appendChild(div);
     document.getElementById('replayBtn').addEventListener('click', () => { this.destroy(); this.init(this.container, this.statsCb); });

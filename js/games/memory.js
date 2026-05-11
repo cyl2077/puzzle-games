@@ -1,6 +1,6 @@
-// === Memory Match Game ===
+// === Memory Match Game (记忆翻牌) - 5 关闯关模式 ===
 const MemoryGame = {
-  emojis: ['🐶','🐱','🐰','🦊','🐻','🐼','🐨','🐯'],
+  allEmojis: ['🐶','🐱','🐰','🦊','🐻','🐼','🐨','🐯','🐮','🐷','🐸','🐵'],
   cards: [],
   flipped: [],
   matched: [],
@@ -9,22 +9,50 @@ const MemoryGame = {
   seconds: 0,
   container: null,
   statsCb: null,
+  level: 1, maxLevel: 5,
+  levelConfigs: [
+    { pairs: 4, cols: 4, name: '初级' },
+    { pairs: 6, cols: 6, name: '中级' },
+    { pairs: 8, cols: 4, name: '高级' },
+    { pairs: 10, cols: 5, name: '专家' },
+    { pairs: 12, cols: 6, name: '大师' },
+  ],
 
   init(container, statsCb) {
     this.container = container;
     this.statsCb = statsCb;
     this.moves = 0;
     this.seconds = 0;
+    this.level = 1;
     this.matched = [];
     this.flipped = [];
-    this.cards = [...this.emojis, ...this.emojis]
-      .sort(() => Math.random() - 0.5);
-    this.render();
+    this.showLevelIntro(() => {
+      this.startLevel();
+    });
+  },
+
+  startLevel() {
+    const cfg = this.levelConfigs[this.level - 1];
+    const emojis = this.allEmojis.slice(0, cfg.pairs);
+    this.moves = 0; this.seconds = 0;
+    this.matched = []; this.flipped = [];
+    this.cards = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+    this.render(cfg.cols);
     this.startTimer();
   },
 
-  render() {
-    this.container.innerHTML = '<div class="memory-grid"></div>';
+  showLevelIntro(cb) {
+    const cfg = this.levelConfigs[this.level - 1];
+    const div = document.createElement('div');
+    div.className = 'level-intro';
+    div.innerHTML = `<div class="level-num">第 ${this.level} 关</div><div class="level-title">${cfg.name} · ${cfg.pairs} 对</div>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    setTimeout(() => { if (div.parentNode) div.remove(); cb(); }, 1500);
+  },
+
+  render(cols) {
+    this.container.innerHTML = `<div class="memory-grid" style="grid-template-columns:repeat(${cols},1fr);grid-template-rows:auto"></div>`;
     const grid = this.container.querySelector('.memory-grid');
     this.cards.forEach((emoji, i) => {
       const div = document.createElement('div');
@@ -48,7 +76,8 @@ const MemoryGame = {
 
   updateStats() {
     if (this.statsCb) {
-      this.statsCb({ '步数': this.moves, '配对': `${this.matched.length}/${this.emojis.length}`, '时间': `${this.seconds}s` });
+      const cfg = this.levelConfigs[this.level - 1];
+      this.statsCb({ '关卡': `${this.level}/${this.maxLevel}`, '步数': this.moves, '配对': `${this.matched.length}/${cfg.pairs}`, '时间': `${this.seconds}s` });
     }
   },
 
@@ -67,33 +96,50 @@ const MemoryGame = {
       const [a, b] = this.flipped;
       if (this.cards[a] === this.cards[b]) {
         this.matched.push(a, b);
-        document.querySelectorAll('.memory-card')[a].classList.add('matched');
-        document.querySelectorAll('.memory-card')[b].classList.add('matched');
+        const cards = this.container.querySelectorAll('.memory-card');
+        cards[a].classList.add('matched');
+        cards[b].classList.add('matched');
         this.flipped = [];
         if (this.matched.length === this.cards.length) {
           clearInterval(this.timer);
-          setTimeout(() => this.showWin(), 400);
+          setTimeout(() => {
+            if (this.level >= this.maxLevel) { this.showWin(true); }
+            else { this.levelClear(); }
+          }, 400);
         }
       } else {
         setTimeout(() => {
-          document.querySelectorAll('.memory-card')[a].classList.remove('flipped');
-          document.querySelectorAll('.memory-card')[b].classList.remove('flipped');
-          document.querySelectorAll('.memory-card')[a].textContent = '';
-          document.querySelectorAll('.memory-card')[b].textContent = '';
+          const cards = this.container.querySelectorAll('.memory-card');
+          cards[a].classList.remove('flipped');
+          cards[b].classList.remove('flipped');
+          cards[a].textContent = '';
+          cards[b].textContent = '';
           this.flipped = [];
         }, 600);
       }
     }
   },
 
-  showWin() {
+  levelClear() {
+    const div = document.createElement('div');
+    div.className = 'level-intro';
+    div.innerHTML = `<div class="level-num">✅ 第 ${this.level} 关通过！</div><div class="level-title">准备进入第 ${this.level + 1} 关</div>`;
+    this.container.appendChild(div);
+    setTimeout(() => {
+      if (div.parentNode) div.remove();
+      this.level++;
+      this.startLevel();
+    }, 1800);
+  },
+
+  showWin(full = false) {
     const div = document.createElement('div');
     div.className = 'game-over-overlay';
-    div.innerHTML = `
-      <h3>🎉 恭喜过关！</h3>
-      <p>用了 ${this.moves} 步，耗时 ${this.seconds} 秒</p>
-      <button class="btn" id="replayBtn">再来一局</button>
-    `;
+    if (full) {
+      div.innerHTML = `<h3>🎉 恭喜通关！</h3><p>通过了全部 ${this.maxLevel} 关！用了 ${this.moves} 步</p><button class="btn" id="replayBtn">再来一局</button>`;
+    } else {
+      div.innerHTML = `<h3>🎉 恭喜过关！</h3><p>用了 ${this.moves} 步，耗时 ${this.seconds} 秒</p><button class="btn" id="replayBtn">再来一局</button>`;
+    }
     this.container.style.position = 'relative';
     this.container.appendChild(div);
     document.getElementById('replayBtn').addEventListener('click', () => {
@@ -102,7 +148,5 @@ const MemoryGame = {
     });
   },
 
-  destroy() {
-    clearInterval(this.timer);
-  }
+  destroy() { clearInterval(this.timer); }
 };

@@ -1,0 +1,1746 @@
+      this.clampBasket();
+    });
+
+    this.updateStats();
+    this.loop = setInterval(() => this.tick(), 16);
+  },
+
+  clampBasket() {
+    this.basket.x = Math.max(0, Math.min(this.width - this.basket.w, this.basket.x));
+  },
+
+  tick() {
+    if (!this.running) return;
+    this.frameCount++;
+
+    // Spawn items
+    if (this.frameCount % 40 === 0) {
+      const isBomb = Math.random() < 0.15;
+      const emoji = isBomb ? '💣' : ['🍎','🍊','🍋','🍇','🍓','🍑','🍒','🥝'][Math.floor(Math.random() * 8)];
+      this.items.push({
+        x: Math.random() * (this.width - 30),
+        y: -30,
+        r: 18,
+        emoji,
+        isBomb,
+        vy: this.speed + Math.random()
+      });
+    }
+
+    // Increase speed over time
+    if (this.frameCount % 500 === 0) this.speed += 0.3;
+
+    // Move items
+    for (const item of this.items) item.y += item.vy;
+
+    // Check catch/miss
+    this.items = this.items.filter(item => {
+      if (item.y - item.r > this.height) {
+        if (!item.isBomb) { this.lives--; this.updateStats(); }
+        if (this.lives <= 0) { this.gameOver(); return false; }
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 33 页
+======================================================================
+
+        return false;
+      }
+      // Catch
+      if (item.y + item.r > this.height - this.basket.h - 5 &&
+          item.x > this.basket.x && item.x < this.basket.x + this.basket.w) {
+        if (item.isBomb) {
+          this.lives--;
+          this.updateStats();
+          if (this.lives <= 0) { this.gameOver(); return false; }
+        } else {
+          this.score += 10;
+          this.updateStats();
+        }
+        return false;
+      }
+      return true;
+    });
+
+    this.draw();
+  },
+
+  draw() {
+    const c = this.ctx;
+    c.clearRect(0, 0, this.width, this.height);
+    c.fillStyle = '#1a1a3e';
+    c.fillRect(0, 0, this.width, this.height);
+
+    // Items
+    for (const item of this.items) {
+      c.font = '28px sans-serif';
+      c.textAlign = 'center';
+      c.fillText(item.emoji, item.x, item.y);
+    }
+
+    // Basket
+    c.fillStyle = '#a29bfe';
+    c.fillRect(this.basket.x, this.height - this.basket.h, this.basket.w, this.basket.h);
+    c.fillStyle = '#6c5ce7';
+    c.fillRect(this.basket.x + 5, this.height - this.basket.h + 2, this.basket.w - 10, this.basket.h - 4);
+
+    // Lives
+    c.font = '14px sans-serif';
+    c.textAlign = 'left';
+    c.fillStyle = '#fff';
+    c.fillText('❤️'.repeat(this.lives), 8, 22);
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '得分': this.score, '生命': this.lives });
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 34 页
+======================================================================
+
+    }
+  },
+
+  gameOver() {
+    this.running = false;
+    clearInterval(this.loop);
+
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `<h3>游戏结束</h3><p>得分: ${this.score}</p><button class="btn" id="replayBtn">再来一次</button>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      this.destroy();
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+  destroy() {
+    this.running = false;
+    clearInterval(this.loop);
+  }
+};
+
+========== js/games/puzzle.js ==========
+
+/**
+ * Sliding Puzzle (15-Puzzle / 滑块拼图)
+ * @author ch2077
+ * @version 1.1.0
+ * @date 2025-02-15 加入逆序数判定可解性
+ * @date 2025-02-20 增加shuffle时的可解校验，防止生成死局
+ *
+ * 4x4十五拼图，数字1-15+空位
+ * 点击与空位相邻的滑块移动，直到排列为1-15顺序
+ * 随机打乱时用逆序对数判断可解性，保证不会生成无解盘面
+ */
+const PuzzleGame = {
+  size: 4,
+  tiles: [],
+  emptyIdx: 15,
+  moves: 0,
+  container: null,
+  statsCb: null,
+  gridEl: null,
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.moves = 0;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 35 页
+======================================================================
+
+    this.tiles = Array.from({ length: this.size * this.size - 1 }, (_, i) => i + 1);
+    this.tiles.push(0); // 0 = empty
+    this.emptyIdx = this.tiles.indexOf(0);
+
+    // Shuffle by making random valid moves
+    for (let i = 0; i < 200; i++) {
+      const neighbors = this.getNeighbors(this.emptyIdx);
+      const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
+      this.swap(this.emptyIdx, pick);
+      this.emptyIdx = pick;
+    }
+
+    this.render();
+    this.updateStats();
+  },
+
+  getNeighbors(idx) {
+    const r = Math.floor(idx / this.size);
+    const c = idx % this.size;
+    const result = [];
+    if (r > 0) result.push(idx - this.size);
+    if (r < this.size - 1) result.push(idx + this.size);
+    if (c > 0) result.push(idx - 1);
+    if (c < this.size - 1) result.push(idx + 1);
+    return result;
+  },
+
+  swap(a, b) {
+    [this.tiles[a], this.tiles[b]] = [this.tiles[b], this.tiles[a]];
+  },
+
+  render() {
+    this.container.innerHTML = '<div class="puzzle-grid"></div>';
+    this.gridEl = this.container.querySelector('.puzzle-grid');
+
+    this.tiles.forEach((val, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'puzzle-tile' + (val === 0 ? ' empty' : '');
+      tile.textContent = val || '';
+      tile.addEventListener('click', () => this.move(i));
+      this.gridEl.appendChild(tile);
+    });
+  },
+
+  move(idx) {
+    if (this.tiles[idx] === 0) return;
+    const neighbors = this.getNeighbors(this.emptyIdx);
+    if (!neighbors.includes(idx)) return;
+
+    this.swap(idx, this.emptyIdx);
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 36 页
+======================================================================
+
+    this.emptyIdx = idx;
+    this.moves++;
+    this.updateStats();
+    this.refreshDOM();
+
+    if (this.checkWin()) {
+      this.showWin();
+    }
+  },
+
+  refreshDOM() {
+    const tileEls = this.gridEl.querySelectorAll('.puzzle-tile');
+    this.tiles.forEach((val, i) => {
+      tileEls[i].textContent = val || '';
+      tileEls[i].className = 'puzzle-tile' + (val === 0 ? ' empty' : '');
+    });
+  },
+
+  checkWin() {
+    for (let i = 0; i < this.tiles.length - 1; i++) {
+      if (this.tiles[i] !== i + 1) return false;
+    }
+    return true;
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '步数': this.moves });
+    }
+  },
+
+  showWin() {
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `
+      <h3>🎉 拼图完成！</h3>
+      <p>用了 ${this.moves} 步</p>
+      <button class="btn" id="replayBtn">再来一局</button>
+    `;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+  destroy() {}
+};
+
+========== js/games/tictactoe.js ==========
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 37 页
+======================================================================
+
+
+/**
+ * Tic-Tac-Toe (井字棋)
+ * @author ch2077
+ * @version 1.0.3
+ * @date 2025-01-25 初版
+ * @date 2025-02-18 AI改用minimax，从随机落子升级为不可战胜
+ *
+ * 3x3井字棋，玩家X先手vs AI(O)
+ * AI使用minimax递归搜索最优解，保证至少平局
+ * 记录胜负平统计（wins/losses/draws）
+ */
+const TicTacToeGame = {
+  board: [],
+  player: 'X',
+  ai: 'O',
+  turn: 'X',
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  container: null,
+  statsCb: null,
+  gridEl: null,
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.board = Array(9).fill('');
+    this.turn = 'X';
+    this.render();
+    this.updateStats();
+  },
+
+  render() {
+    this.container.innerHTML = `
+      <div class="tictactoe-grid"></div>
+      <div class="instructions" style="margin-top:16px">你执 X，AI 执 O</div>
+    `;
+    this.gridEl = this.container.querySelector('.tictactoe-grid');
+    this.gridEl.style.cssText = 'display:grid;grid-template-columns:repeat(3,80px);grid-template-rows:repeat(3,80px);gap:4px;';
+
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'ttt-cell';
+      cell.style.cssText = 'background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;cursor:pointer;transition:background 0.15s;';
+      cell.dataset.idx = i;
+      cell.textContent = this.board[i];
+      cell.addEventListener('click', () => this.playerMove(i, cell));
+      this.gridEl.appendChild(cell);
+    }
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 38 页
+======================================================================
+
+  },
+
+  playerMove(idx, cell) {
+    if (this.board[idx] !== '' || this.turn !== 'X') return;
+    this.board[idx] = 'X';
+    cell.textContent = 'X';
+    cell.style.color = '#54a0ff';
+
+    if (this.checkWin('X')) {
+      this.wins++;
+      this.updateStats();
+      this.endGame('你赢了！');
+      return;
+    }
+    if (this.board.every(c => c !== '')) {
+      this.draws++;
+      this.updateStats();
+      this.endGame('平局！');
+      return;
+    }
+
+    this.turn = 'O';
+    setTimeout(() => this.aiMove(), 300);
+  },
+
+  aiMove() {
+    const move = this.getBestMove();
+    this.board[move] = 'O';
+    const cell = this.gridEl.querySelectorAll('.ttt-cell')[move];
+    cell.textContent = 'O';
+    cell.style.color = '#ff6b6b';
+
+    if (this.checkWin('O')) {
+      this.losses++;
+      this.updateStats();
+      this.endGame('AI 赢了！');
+      return;
+    }
+    if (this.board.every(c => c !== '')) {
+      this.draws++;
+      this.updateStats();
+      this.endGame('平局！');
+      return;
+    }
+    this.turn = 'X';
+  },
+
+  getBestMove() {
+    // Minimax
+    let best = -Infinity;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 39 页
+======================================================================
+
+    let move = 0;
+    for (let i = 0; i < 9; i++) {
+      if (this.board[i] === '') {
+        this.board[i] = 'O';
+        const score = this.minimax(0, false);
+        this.board[i] = '';
+        if (score > best) { best = score; move = i; }
+      }
+    }
+    return move;
+  },
+
+  minimax(depth, isMax) {
+    if (this.checkWin('O')) return 10 - depth;
+    if (this.checkWin('X')) return depth - 10;
+    if (this.board.every(c => c !== '')) return 0;
+
+    if (isMax) {
+      let best = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (this.board[i] === '') {
+          this.board[i] = 'O';
+          best = Math.max(best, this.minimax(depth + 1, false));
+          this.board[i] = '';
+        }
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (this.board[i] === '') {
+          this.board[i] = 'X';
+          best = Math.min(best, this.minimax(depth + 1, true));
+          this.board[i] = '';
+        }
+      }
+      return best;
+    }
+  },
+
+  checkWin(p) {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return wins.some(w => w.every(i => this.board[i] === p));
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '胜': this.wins, '负': this.losses, '平': this.draws });
+    }
+  },
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 40 页
+======================================================================
+
+
+  endGame(msg) {
+    this.gridEl.querySelectorAll('.ttt-cell').forEach(c => c.style.cursor = 'default');
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `<h3>${msg}</h3><button class="btn" id="replayBtn">再来一局</button>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+  destroy() {}
+};
+
+========== js/games/simon.js ==========
+
+/**
+ * Simon Says (记忆灯)
+ * @author ch2077
+ * @version 1.0.2
+ * @date 2025-03-25 初版
+ * @date 2025-04-02 优化闪烁间隔，加长序列时每步间隔递减
+ *
+ * 经典记忆灯游戏，记住灯光序列并按顺序复现
+ * 每轮序列长度+1，最长可无限挑战，错误即结束
+ * 4色灯：红蓝绿黄，视觉+（伪）音效提示
+ */
+const SimonGame = {
+  sequence: [], playerIdx: 0,
+  showingSequence: false,
+  score: 0, highScore: 0,
+  container: null, statsCb: null,
+  colors: ['#ff6b6b','#54a0ff','#00d2a0','#ffd93d'],
+  colorNames: ['红','蓝','绿','黄'],
+  soundEnabled: true,
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.sequence = [];
+    this.playerIdx = 0;
+    this.showingSequence = false;
+    this.score = 0;
+    const saved = localStorage.getItem('simon_high');
+    this.highScore = saved ? parseInt(saved) : 0;
+    this.render();
+    setTimeout(() => this.nextRound(), 600);
+  },
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 41 页
+======================================================================
+
+
+  render() {
+    this.container.innerHTML = `
+      <div style="text-align:center">
+        <div style="color:var(--text2);font-size:13px;margin-bottom:12px">记住灯光顺序，然后重复点击！</div>
+        <div class="simon-board">
+          ${this.colors.map((c, i) => `
+            <button class="simon-btn" data-idx="${i}" style="background:${c};aspect-ratio:1;border:none;border-radius:16px;cursor:pointer;transition:all 0.15s;box-shadow:0 0 0 rgba(0,0,0,0.3)"></button>
+          `).join('')}
+        </div>
+        <div id="simonStatus" style="margin-top:14px;font-weight:600;font-size:15px;color:var(--accent2)">准备...</div>
+        <div style="color:var(--text2);font-size:12px;margin-top:8px">最高分: ${this.highScore}</div>
+      </div>`;
+
+    this.container.querySelectorAll('.simon-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => this.playerPress(i, btn));
+    });
+  },
+
+  nextRound() {
+    this.showingSequence = true;
+    this.playerIdx = 0;
+    this.sequence.push(Math.floor(Math.random() * 4));
+    document.getElementById('simonStatus').textContent = '记住顺序...';
+    this.updateStats();
+    this.playSequence(0);
+  },
+
+  playSequence(i) {
+    if (i >= this.sequence.length) {
+      this.showingSequence = false;
+      document.getElementById('simonStatus').textContent = '轮到你！';
+      return;
+    }
+    const idx = this.sequence[i];
+    const btn = this.container.querySelector(`.simon-btn[data-idx="${idx}"]`);
+    this.lightUp(btn, idx);
+    setTimeout(() => this.playSequence(i + 1), 500);
+  },
+
+  lightUp(btn, idx) {
+    btn.style.transform = 'scale(1.1)';
+    btn.style.boxShadow = `0 0 24px ${this.colors[idx]}`;
+    // Simple tone via oscillator
+    if (this.soundEnabled) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 42 页
+======================================================================
+
+        osc.frequency.value = 300 + idx * 100;
+        osc.type = 'sine';
+        gain.gain.value = 0.1;
+        osc.start(); osc.stop(ctx.currentTime + 0.15);
+      } catch(e) {}
+    }
+    setTimeout(() => {
+      btn.style.transform = 'scale(1)';
+      btn.style.boxShadow = '0 0 0 rgba(0,0,0,0.3)';
+    }, 300);
+  },
+
+  playerPress(idx, btn) {
+    if (this.showingSequence) return;
+    this.lightUp(btn, idx);
+
+    if (idx !== this.sequence[this.playerIdx]) {
+      document.getElementById('simonStatus').innerHTML = '<span style="color:#ff6b6b">错误！</span>';
+      if (this.score > this.highScore) {
+        this.highScore = this.score;
+        localStorage.setItem('simon_high', this.highScore);
+      }
+      setTimeout(() => this.showGameOver(), 800);
+      return;
+    }
+
+    this.playerIdx++;
+    if (this.playerIdx >= this.sequence.length) {
+      this.score++;
+      document.getElementById('simonStatus').textContent = '正确！下一轮...';
+      setTimeout(() => this.nextRound(), 800);
+    }
+    this.updateStats();
+  },
+
+  updateStats() {
+    if (this.statsCb) this.statsCb({ '得分': this.score, '序列长度': this.sequence.length });
+  },
+
+  showGameOver() {
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `<h3>游戏结束</h3><p>分数: ${this.score} | 最高分: ${this.highScore}</p><button class="btn" id="replayBtn">再来一次</button>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 43 页
+======================================================================
+
+  destroy() {}
+};
+
+========== js/games/reaction.js ==========
+
+/**
+ * Reaction Time (反应速度测试)
+ * @author ch2077
+ * @version 1.0.3
+ * @date 2025-02-01 初版
+ * @date 2025-03-08 加了pre-click检测，防止预判提前点击
+ *
+ * 屏幕变绿后尽快点击，测试反应速度（ms）
+ * 状态机：idle→waiting(random delay)→ready→clicked
+ * 记录最近5次成绩+最佳成绩
+ */
+const ReactionGame = {
+  state: 'idle', // idle, waiting, ready, clicked
+  startTime: 0,
+  timeout: null,
+  best: Infinity,
+  results: [],
+  container: null,
+  statsCb: null,
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.state = 'idle';
+    this.results = [];
+    this.render();
+    this.updateStats();
+  },
+
+  render() {
+    this.container.innerHTML = `
+      <div style="text-align:center">
+        <div class="reaction-zone" id="reactionZone"
+          style="width:200px;height:200px;border-radius:50%;margin:20px auto;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.1s;user-select:none;font-size:16px;font-weight:700">
+          <span id="zoneText">点我开始</span>
+        </div>
+        <div id="reactionResults" style="margin-top:16px"></div>
+      </div>
+    `;
+
+    const zone = document.getElementById('reactionZone');
+    this.updateZoneStyle(zone, 'idle');
+
+    zone.addEventListener('click', () => {
+      if (this.state === 'idle' || this.state === 'clicked') {
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 44 页
+======================================================================
+
+        this.startCountdown();
+      } else if (this.state === 'waiting') {
+        this.tooEarly();
+      } else if (this.state === 'ready') {
+        this.recordReaction();
+      }
+    });
+  },
+
+  updateZoneStyle(zone, state) {
+    if (state === 'idle') {
+      zone.style.background = 'var(--accent)';
+      zone.style.color = '#fff';
+      document.getElementById('zoneText').textContent = '点我开始';
+    } else if (state === 'waiting') {
+      zone.style.background = '#ff6b6b';
+      zone.style.color = '#fff';
+      document.getElementById('zoneText').textContent = '等待绿色...';
+    } else if (state === 'ready') {
+      zone.style.background = '#00d2a0';
+      zone.style.color = '#fff';
+      document.getElementById('zoneText').textContent = '快按！';
+    } else if (state === 'clicked') {
+      zone.style.background = 'var(--accent)';
+      zone.style.color = '#fff';
+      document.getElementById('zoneText').textContent = '再试一次';
+    }
+  },
+
+  startCountdown() {
+    this.state = 'waiting';
+    const zone = document.getElementById('reactionZone');
+    this.updateZoneStyle(zone, 'waiting');
+
+    const delay = 1000 + Math.random() * 3000;
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => {
+      this.state = 'ready';
+      this.startTime = Date.now();
+      this.updateZoneStyle(zone, 'ready');
+    }, delay);
+  },
+
+  tooEarly() {
+    this.state = 'clicked';
+    clearTimeout(this.timeout);
+    const zone = document.getElementById('reactionZone');
+    zone.style.background = '#ffa726';
+    document.getElementById('zoneText').textContent = '太早了！等绿色再按';
+    setTimeout(() => {
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 45 页
+======================================================================
+
+      this.state = 'idle';
+      this.updateZoneStyle(zone, 'idle');
+    }, 1500);
+  },
+
+  recordReaction() {
+    this.state = 'clicked';
+    const time = Date.now() - this.startTime;
+    this.results.unshift(time);
+    if (this.results.length > 5) this.results.pop();
+    if (time < this.best) this.best = time;
+
+    const zone = document.getElementById('reactionZone');
+    document.getElementById('zoneText').textContent = `${time} ms`;
+    this.updateStats();
+    this.showResults();
+
+    setTimeout(() => {
+      this.state = 'idle';
+      this.updateZoneStyle(zone, 'idle');
+    }, 2000);
+  },
+
+  showResults() {
+    const el = document.getElementById('reactionResults');
+    el.innerHTML = `<p style="color:var(--text2);font-size:13px;margin-bottom:8px">最近 5 次：</p>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        ${this.results.map((t, i) => `<span style="padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;
+          background:${i===0?'var(--accent)':'var(--surface2)'};color:${i===0?'#fff':'var(--text)'}"
+        >${t}ms</span>`).join('')}
+      </div>`;
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '最佳': this.best === Infinity ? '--' : `${this.best}ms` });
+    }
+  },
+
+  destroy() {
+    clearTimeout(this.timeout);
+  }
+};
+
+========== js/games/numberguess.js ==========
+
+/**
+ * Number Guessing (数字猜谜)
+ * @author ch2077
+ * @version 1.0.2
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 46 页
+======================================================================
+
+ * @date 2025-01-28 初版
+ * @date 2025-02-08 范围提示改为动态区间显示
+ *
+ * 猜1-100随机数，每次猜完提示"大了/小了"并缩小范围
+ * 计次统计，提供重置重新开局
+ */
+const NumberGuessGame = {
+  target: 0,
+  attempts: 0,
+  range: [1, 100],
+  container: null,
+  statsCb: null,
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.target = Math.floor(Math.random() * 100) + 1;
+    this.attempts = 0;
+    this.range = [1, 100];
+    this.render();
+    this.updateStats();
+  },
+
+  render() {
+    this.container.innerHTML = `
+      <div style="text-align:center">
+        <div style="font-size:60px;margin-bottom:12px">🤔</div>
+        <p style="color:var(--text2);margin-bottom:8px">我想了一个 1~100 之间的数字</p>
+        <p style="color:var(--accent2);font-size:14px;margin-bottom:20px" id="rangeHint">范围: 1 ~ 100</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
+          <input type="number" id="guessInput" min="1" max="100" placeholder="输入数字"
+            style="width:140px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;text-align:center">
+          <button class="btn" id="guessBtn">猜！</button>
+        </div>
+        <div id="resultHint" style="font-size:15px;min-height:24px"></div>
+        <div id="history" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
+      </div>
+    `;
+
+    const input = document.getElementById('guessInput');
+    document.getElementById('guessBtn').addEventListener('click', () => this.guess());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.guess();
+    });
+    input.focus();
+  },
+
+  guess() {
+    const input = document.getElementById('guessInput');
+    const val = parseInt(input.value);
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 47 页
+======================================================================
+
+    if (isNaN(val) || val < 1 || val > 100) {
+      document.getElementById('resultHint').innerHTML = '<span style="color:#ff6b6b">请输入 1~100 的数字</span>';
+      return;
+    }
+
+    this.attempts++;
+    this.updateStats();
+
+    const hint = document.getElementById('resultHint');
+    const history = document.getElementById('history');
+    const badge = document.createElement('span');
+    badge.style.cssText = 'padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;';
+
+    if (val === this.target) {
+      hint.innerHTML = `<span style="color:#00d2a0;font-size:18px">🎉 猜对了！数字就是 ${this.target}</span>`;
+      badge.style.background = 'var(--green)';
+      badge.style.color = '#fff';
+      badge.textContent = val + ' ✓';
+      history.appendChild(badge);
+      this.showWin();
+      return;
+    }
+
+    if (val < this.target) {
+      this.range[0] = Math.max(this.range[0], val + 1);
+      hint.innerHTML = `<span style="color:#ffa726">📈 太小了！再大一点</span>`;
+      badge.style.background = '#3a2a10';
+      badge.style.color = '#ffa726';
+    } else {
+      this.range[1] = Math.min(this.range[1], val - 1);
+      hint.innerHTML = `<span style="color:#54a0ff">📉 太大了！再小一点</span>`;
+      badge.style.background = '#1a2a3a';
+      badge.style.color = '#54a0ff';
+    }
+    badge.textContent = val;
+    history.appendChild(badge);
+
+    document.getElementById('rangeHint').textContent = `范围: ${this.range[0]} ~ ${this.range[1]}`;
+    input.value = '';
+    input.focus();
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '猜测次数': this.attempts });
+    }
+  },
+
+  showWin() {
+    document.getElementById('guessBtn').disabled = true;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 48 页
+======================================================================
+
+    document.getElementById('guessInput').disabled = true;
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `<h3>🎉 猜对了！</h3><p>用了 ${this.attempts} 次</p><button class="btn" id="replayBtn">再来一局</button>`;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+  destroy() {}
+};
+
+========== js/games/colormatch.js ==========
+
+/**
+ * Color Match / Stroop Test (颜色匹配)
+ * @author ch2077
+ * @version 1.0.4
+ * @date 2025-02-12 初版（基于Stroop效应）
+ * @date 2025-03-10 30秒限时+连击加成
+ *
+ * 判断文字颜色是否与文字内容一致，30秒限时
+ * Stroop效应：文字说"红"但显示蓝色→反应变慢
+ * 连击(Streak)计次，最高连击记录保存
+ */
+const ColorMatchGame = {
+  colorName: '',
+  displayColor: '',
+  score: 0,
+  streak: 0,
+  bestStreak: 0,
+  timeLeft: 30,
+  running: false,
+  timer: null,
+  container: null,
+  statsCb: null,
+  colors: ['红','蓝','绿','黄','橙','紫'],
+  colorMap: { '红': '#ff6b6b', '蓝': '#54a0ff', '绿': '#00d2a0', '黄': '#ffd93d', '橙': '#ffa726', '紫': '#a29bfe' },
+
+  init(container, statsCb) {
+    this.container = container;
+    this.statsCb = statsCb;
+    this.score = 0;
+    this.streak = 0;
+    this.bestStreak = 0;
+    this.timeLeft = 30;
+    this.running = true;
+    this.render();
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 49 页
+======================================================================
+
+    this.nextRound();
+    this.startTimer();
+    this.updateStats();
+  },
+
+  render() {
+    this.container.innerHTML = `
+      <div style="text-align:center">
+        <div style="color:var(--text2);font-size:14px;margin-bottom:8px">文字颜色与名称是否一致？</div>
+        <div id="colorDisplay" style="font-size:48px;font-weight:800;min-height:80px;display:flex;align-items:center;justify-content:center;transition:all 0.15s"></div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:20px">
+          <button class="btn" id="matchYes" style="font-size:18px;padding:14px 36px;background:var(--green)">✅ 一致</button>
+          <button class="btn" id="matchNo" style="font-size:18px;padding:14px 36px;background:var(--red)">❌ 不一致</button>
+        </div>
+        <div id="matchResult" style="margin-top:16px;min-height:28px;font-size:15px;font-weight:600"></div>
+        <div style="margin-top:12px;color:var(--text2);font-size:13px">
+          连击: <span id="streakDisplay" style="color:var(--accent2);font-weight:700">0</span>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('matchYes').addEventListener('click', () => this.answer(true));
+    document.getElementById('matchNo').addEventListener('click', () => this.answer(false));
+  },
+
+  nextRound() {
+    if (!this.running) return;
+
+    // Randomly choose whether color matches name
+    const match = Math.random() < 0.4; // 40% chance of match
+    this.colorName = this.colors[Math.floor(Math.random() * this.colors.length)];
+
+    if (match) {
+      this.displayColor = this.colorMap[this.colorName];
+    } else {
+      // Pick a different color
+      const others = this.colors.filter(c => c !== this.colorName);
+      const pick = others[Math.floor(Math.random() * others.length)];
+      this.displayColor = this.colorMap[pick];
+    }
+
+    const display = document.getElementById('colorDisplay');
+    if (display) {
+      display.textContent = this.colorName;
+      display.style.color = this.displayColor;
+    }
+  },
+
+  answer(userSaysMatch) {
+    if (!this.running) return;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 50 页
+======================================================================
+
+    const actualMatch = this.displayColor === this.colorMap[this.colorName];
+    const correct = (userSaysMatch === actualMatch);
+
+    const resultEl = document.getElementById('matchResult');
+    if (correct) {
+      this.score += 10 + this.streak * 2;
+      this.streak++;
+      if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+      resultEl.innerHTML = '<span style="color:#00d2a0">正确！</span>';
+    } else {
+      this.streak = 0;
+      resultEl.innerHTML = '<span style="color:#ff6b6b">错了！</span>';
+    }
+
+    document.getElementById('streakDisplay').textContent = this.streak;
+    this.updateStats();
+    this.nextRound();
+  },
+
+  startTimer() {
+    this.timer = setInterval(() => {
+      this.timeLeft--;
+      this.updateStats();
+      if (this.timeLeft <= 0) {
+        this.gameOver();
+      }
+    }, 1000);
+  },
+
+  updateStats() {
+    if (this.statsCb) {
+      this.statsCb({ '得分': this.score, '连击': this.streak, '时间': `${this.timeLeft}s` });
+    }
+  },
+
+  gameOver() {
+    this.running = false;
+    clearInterval(this.timer);
+    if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+
+    const div = document.createElement('div');
+    div.className = 'game-over-overlay';
+    div.innerHTML = `
+      <h3>时间到！</h3>
+      <p>得分: ${this.score} | 最佳连击: ${this.bestStreak}</p>
+      <button class="btn" id="replayBtn">再来一次</button>
+    `;
+    this.container.style.position = 'relative';
+    this.container.appendChild(div);
+    document.getElementById('replayBtn').addEventListener('click', () => {
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 51 页
+======================================================================
+
+      this.destroy();
+      this.init(this.container, this.statsCb);
+    });
+  },
+
+  destroy() {
+    this.running = false;
+    clearInterval(this.timer);
+  }
+};
+
+========== css/style.css ==========
+
+/* === Reset & Base === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #252542;
+  --border: #333355;
+  --text: #e0e0f0;
+  --text2: #8888aa;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00d2a0;
+  --red: #ff6b6b;
+  --orange: #ffa726;
+  --yellow: #ffd93d;
+  --blue: #54a0ff;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --transition: 0.2s ease;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === Header === */
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 52 页
+======================================================================
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo { font-size: 28px; }
+.app-header h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+
+.btn-back {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+}
+.btn-back:hover { background: var(--border); }
+
+/* === Home Page === */
+.home-page { padding: 40px 24px; max-width: 1000px; margin: 0 auto; width: 100%; }
+
+.hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.hero h2 { font-size: 28px; margin-bottom: 8px; color: var(--accent2); }
+.hero p { font-size: 16px; color: var(--text2); }
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 53 页
+======================================================================
+
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+}
+.game-card .game-icon { font-size: 40px; }
+.game-card .game-name { font-size: 18px; font-weight: 600; }
+.game-card .game-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.game-card .game-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.game-card .tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+/* === Game Page === */
+.game-page { padding: 20px 24px 40px; max-width: 700px; margin: 0 auto; width: 100%; }
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.game-header h2 { font-size: 22px; color: var(--accent2); }
+
+.game-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.game-stats { display: flex; gap: 16px; }
+
+.stat {
+  background: var(--surface2);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.stat span { color: var(--text); font-weight: 600; }
+
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 54 页
+======================================================================
+
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.btn:hover { opacity: 0.85; transform: scale(1.02); }
+.btn:active { transform: scale(0.98); }
+.btn.small { padding: 5px 12px; font-size: 12px; }
+
+.game-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === Footer === */
+.app-footer {
+  text-align: center;
+  padding: 20px;
+  color: var(--text2);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+/* === Memory Game === */
+.memory-grid {
+  display: grid;
+  gap: 8px;
+  justify-content: center;
+  justify-items: stretch;
+}
+
+.memory-card {
+  width: 72px;
+  height: 72px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 55 页
+======================================================================
+
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background var(--transition);
+  user-select: none;
+}
+.memory-card:hover { border-color: var(--accent); }
+.memory-card.flipped { background: var(--accent); border-color: var(--accent2); }
+.memory-card.matched { background: var(--green); border-color: var(--green); opacity: 0.7; }
+
+/* === 2048 === */
+.game-2048 { width: 100%; max-width: 400px; }
+.board-2048 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 8px;
+  aspect-ratio: 1;
+  background: var(--surface2);
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.cell-2048 {
+  background: var(--bg);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  transition: all 0.1s ease;
+}
+
+/* === Minesweeper === */
+.mine-grid {
+  display: grid;
+  gap: 2px;
+  background: var(--surface2);
+  padding: 4px;
+  border-radius: var(--radius);
+}
+
+.mine-cell {
+  width: 32px;
+  height: 32px;
+  background: var(--bg);
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 56 页
+======================================================================
+
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+.mine-cell:hover { background: #2a2a4a; }
+.mine-cell.revealed { background: var(--surface2); }
+.mine-cell.flagged { background: var(--orange); }
+.mine-cell.mine { background: var(--red); }
+
+/* === Sliding Puzzle === */
+.puzzle-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 70px);
+  grid-template-rows: repeat(4, 70px);
+  gap: 4px;
+  background: var(--surface2);
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.puzzle-tile {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background var(--transition);
+  user-select: none;
+}
+.puzzle-tile:hover { opacity: 0.85; }
+.puzzle-tile.empty { background: transparent; cursor: default; }
+
+/* === Snake / Tetris Canvas === */
+canvas.game-canvas {
+  border-radius: 8px;
+  display: block;
+  background: var(--bg);
+}
+
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 57 页
+======================================================================
+
+.instructions {
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+/* === Game Over Overlay === */
+.game-over-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  gap: 16px;
+}
+.game-over-overlay h3 { font-size: 24px; }
+
+/* === Level Transition Overlay === */
+.level-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.82);
+  border-radius: var(--radius);
+  z-index: 20;
+  animation: levelFade 1.5s ease forwards;
+  pointer-events: none;
+}
+.level-intro .level-num {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--accent2);
+  text-shadow: 0 0 20px rgba(108,92,231,0.5);
+}
+.level-intro .level-title {
+  font-size: 16px;
+  color: var(--text);
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+@keyframes levelFade {
+  0% { opacity: 1; }
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 58 页
+======================================================================
+
+  65% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* === Responsive === */
+@media (max-width: 600px) {
+  .app-header { padding: 12px 16px; }
+  .app-header h1 { font-size: 17px; }
+  .hero h2 { font-size: 22px; }
+  .home-page { padding: 24px 16px; }
+  .game-page { padding: 16px; }
+  .game-grid { grid-template-columns: 1fr; }
+  .game-area { padding: 16px; }
+
+  .memory-card { width: 58px; height: 58px; font-size: 24px; }
+
+  .puzzle-grid {
+    grid-template-columns: repeat(4, 60px);
+    grid-template-rows: repeat(4, 60px);
+  }
+  .puzzle-tile { font-size: 18px; }
+
+  .mine-cell { width: 28px; height: 28px; font-size: 11px; }
+
+  .cell-2048 { font-size: 18px; }
+}
+
+/* === Tile colors for 2048 === */
+.tile-2    { background: #eee4da; color: #776e65; }
+.tile-4    { background: #ede0c8; color: #776e65; }
+.tile-8    { background: #f2b179; color: #f9f6f2; }
+.tile-16   { background: #f59563; color: #f9f6f2; }
+.tile-32   { background: #f67c5f; color: #f9f6f2; }
+.tile-64   { background: #f65e3b; color: #f9f6f2; }
+.tile-128  { background: #edcf72; color: #f9f6f2; }
+.tile-256  { background: #edcc61; color: #f9f6f2; }
+.tile-512  { background: #edc850; color: #f9f6f2; }
+.tile-1024 { background: #edc53f; color: #f9f6f2; }
+.tile-2048 { background: #edc22e; color: #f9f6f2; }
+
+/* Position relative for game area to support overlays */
+.game-area { position: relative; }
+
+/* === Delta Force Randomizer === */
+.delta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 59 页
+======================================================================
+
+
+.delta-slot {
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.delta-photo {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+
+.delta-photo-icon {
+  font-size: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+.photo-done {
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(108,92,231,0.4);
+}
+
+.delta-label-sm {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.delta-display {
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 20px;
+  transition: color 0.1s;
+}
+
+.delta-display.rolling {
+  animation: deltaShake 0.06s infinite;
+}
+
+.delta-display.done {
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 60 页
+======================================================================
+
+  animation: deltaPop 0.3s ease;
+}
+
+@keyframes deltaShake {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes deltaPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108,92,231,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(108,92,231,0); }
+}
+
+.btn.pulse {
+  animation: pulse 2s infinite;
+}
+
+.delta-result-card {
+  background: var(--surface2);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: left;
+  line-height: 2;
+  border: 1px solid var(--border);
+}
+
+.delta-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.delta-result-item:last-child { border-bottom: none; }
+
+.delta-result-icon { font-size: 18px; }
+.delta-result-name { color: var(--text2); font-size: 13px; min-width: 40px; }
+.delta-result-val { color: var(--accent2); font-weight: 700; margin-left: auto; }
+
+@media (max-width: 600px) {
+  .delta-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 61 页
+======================================================================
+
+  }
+  .delta-photo-icon { font-size: 28px; }
+  .delta-display { font-size: 12px; }
+}
+
+/* === Wordle === */
+.wordle-grid { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.wordle-row { display: flex; gap: 6px; }
+.wordle-cell {
+  width: 52px; height: 52px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700;
+  transition: background 0.3s, transform 0.4s;
+  text-transform: uppercase;
+}
+.wordle-key {
+  flex: 1; min-width: 24px; padding: 8px 4px !important;
+  font-size: 11px !important; font-weight: 600;
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+}
+
+/* === Simon Says === */
+.simon-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+/* === Whack-a-Mole === */
+.whack-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 330px;
+  margin: 0 auto;
+}
+.whack-hole {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--surface2);
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 62 页
+======================================================================
+
+  align-items: center;
+  justify-content: center;
+}
+.whack-mole {
+  font-size: 36px;
+  transform: translateY(60px);
+  transition: transform 0.15s ease;
+  z-index: 2;
+}
+.whack-mole.up { transform: translateY(0); }
+.whack-dirt {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+  background: #3d2e1a;
+  border-radius: 50% 50% 0 0;
+}
+
+@media (max-width: 600px) {
+  .wordle-cell { width: 40px; height: 40px; font-size: 18px; }
+}
+
+/* === D-Pad (Snake) === */
+.dpad {
+  display: grid;
+  grid-template-areas: ". up ." "left . right" ". down .";
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 4px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.dpad-btn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 22px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.dpad-btn:active { background: var(--accent); }
+.dpad-up { grid-area: up; }
+.dpad-down { grid-area: down; }
+.dpad-left { grid-area: left; }
+.dpad-right { grid-area: right; }
+
+/* === Tetris Controls === */
+.tetris-controls {
+  display: flex;
+
+----------------------------------------------------------------------
+======================================================================
+  益智小游戏合集平台系统 V3.2                       第 63 页
+======================================================================
+
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.tet-btn {
+  flex: 1;
+  min-width: 48px;
+  padding: 12px 8px !important;
+  font-size: 18px !important;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Hide D-pad & tetris controls on desktop, show on touch */
+@media (hover: hover) and (pointer: fine) {
+  .dpad { display: none; }
+  .tetris-controls { display: none; }
+}

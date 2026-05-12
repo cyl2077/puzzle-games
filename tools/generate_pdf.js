@@ -5,7 +5,6 @@ const path = require('path');
 const docsDir = path.join(__dirname, '..', 'docs');
 const rootDir = path.join(__dirname, '..');
 
-// Source files in order for front 30 pages
 const frontFiles = [
   { path: 'js/app.js', desc: 'App Shell' },
   { path: 'index.html', desc: 'HTML' },
@@ -19,7 +18,6 @@ const frontFiles = [
   { path: 'js/games/match3.js', desc: 'Match 3' },
 ];
 
-// Source files in reverse order for back 30 pages
 const backFiles = [
   { path: 'css/style.css', desc: 'Stylesheet' },
   { path: 'js/games/colormatch.js', desc: 'Color Match' },
@@ -40,7 +38,8 @@ const backFiles = [
 function generateSourcePDF(files, outputFile, reverse) {
   const doc = new PDFDocument({
     size: 'A4',
-    margins: { top: 24, bottom: 24, left: 28, right: 28 }
+    margins: { top: 25, bottom: 25, left: 30, right: 30 },
+    bufferPages: false,
   });
 
   const outPath = path.join(docsDir, outputFile);
@@ -48,61 +47,61 @@ function generateSourcePDF(files, outputFile, reverse) {
 
   if (reverse) files = [...files].reverse();
 
-  const charsPerLine = 82;
-  const linesPerPage = 56;
-
-  let allLines = [];
+  // Build line list from source files
+  const allLines = [];
   for (const file of files) {
     const filePath = path.join(rootDir, file.path);
-    if (!fs.existsSync(filePath)) { continue; }
+    if (!fs.existsSync(filePath)) continue;
     const content = fs.readFileSync(filePath, 'utf-8');
-    allLines.push(' ');
+    allLines.push('');
     allLines.push(`// === ${file.desc} (${file.path}) ===`);
-    allLines.push(' ');
-    for (const l of content.split('\n')) allLines.push(l);
+    allLines.push('');
+    for (const l of content.split('\n')) allLines.push(l.length > 82 ? l.substring(0, 82) : l);
   }
 
+  const maxLen = 82;
   let pageNum = 1;
-  let lineCount = 0;
 
-  function addPageFooter() {
+  // Write page header
+  function writeHeader() {
     doc.font('Times-Roman').fontSize(7);
-    const pageW = doc.page.width;
-    const pageH = doc.page.height;
-    doc.text(`Page ${pageNum}`, 0, pageH - 30, { width: pageW, align: 'center' });
+    doc.text('Puzzle Games Collection  V3.2', doc.page.margins.left, doc.page.margins.top, {
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+    });
+    doc.moveDown(0.5);
+    doc.font('Courier').fontSize(7);
   }
 
-  // First page header
-  doc.font('Times-Roman').fontSize(7);
-  doc.text('Puzzle Games Collection  V3.2', { align: 'left' });
-  doc.moveDown(0.3);
-  doc.font('Courier').fontSize(7);
+  // Write page footer
+  function writeFooter() {
+    doc.font('Times-Roman').fontSize(7);
+    doc.text(
+      `Page ${pageNum}`,
+      doc.page.margins.left,
+      doc.page.height - doc.page.margins.bottom - 8,
+      { width: doc.page.width - doc.page.margins.left - doc.page.margins.right, align: 'center' }
+    );
+  }
+
+  writeHeader();
 
   for (let i = 0; i < allLines.length; i++) {
     const raw = allLines[i] || ' ';
-    let text = raw;
-    while (text.length > charsPerLine) {
-      doc.text(text.substring(0, charsPerLine), { lineBreak: false });
-      text = text.substring(charsPerLine);
-      lineCount++;
-    }
-    doc.text(text, { lineBreak: false });
-    doc.moveDown(0.05);
-    lineCount++;
+    const line = raw.length > maxLen ? raw.substring(0, maxLen) : raw;
 
-    if (lineCount >= linesPerPage && i < allLines.length - 1) {
-      addPageFooter();
+    // If we're near bottom of page (leave room for footer), start new page
+    if (doc.y > doc.page.height - doc.page.margins.bottom - 28) {
+      writeFooter();
       doc.addPage();
       pageNum++;
-      lineCount = 0;
-      doc.font('Times-Roman').fontSize(7);
-      doc.text('Puzzle Games Collection  V3.2', { align: 'left' });
-      doc.moveDown(0.3);
-      doc.font('Courier').fontSize(7);
+      writeHeader();
     }
+
+    doc.text(line, { lineBreak: false });
+    doc.y += 9; // line height for 7pt Courier
   }
 
-  addPageFooter();
+  writeFooter();
   doc.end();
   console.log(`Generated: ${outputFile} (${pageNum} pages)`);
 }
@@ -110,7 +109,7 @@ function generateSourcePDF(files, outputFile, reverse) {
 function generateManualPDF(inputFile, outputFile) {
   const doc = new PDFDocument({
     size: 'A4',
-    margins: { top: 36, bottom: 36, left: 50, right: 50 }
+    margins: { top: 36, bottom: 36, left: 50, right: 50 },
   });
 
   doc.registerFont('CN', 'C:/Windows/Fonts/simfang.ttf');
@@ -135,14 +134,11 @@ function generateManualPDF(inputFile, outputFile) {
   let inCodeBlock = false;
 
   for (const line of lines) {
-    if (line.startsWith('```')) {
-      inCodeBlock = !inCodeBlock;
-      continue;
-    }
+    if (line.startsWith('```')) { inCodeBlock = !inCodeBlock; continue; }
 
     if (inCodeBlock) {
       doc.font('Courier').fontSize(8);
-      doc.text(line, 60, doc.y + 0.5, { width: 480 });
+      doc.text(line, 60, doc.y, { width: 480 });
       continue;
     }
 
@@ -169,34 +165,32 @@ function generateManualPDF(inputFile, outputFile) {
     if (line.startsWith('|') && line.endsWith('|')) {
       if (line.includes('---')) continue;
       doc.font('CN').fontSize(9);
-      doc.text(line.split('|').filter(c => c.trim()).join('  |  '), 50, doc.y + 0.4);
+      doc.text(line.split('|').filter(c => c.trim()).join('  |  '), 50, doc.y);
       continue;
     }
 
-    let text = line;
-    if (text.trim().startsWith('- ') || text.trim().startsWith('* ')) {
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
       doc.font('CN').fontSize(10);
-      doc.text('  ' + text.trim(), 55, doc.y + 0.3);
+      doc.text('  ' + line.trim(), 55, doc.y);
       continue;
     }
-    if (text.trim().match(/^\d+\./)) {
+
+    if (line.trim().match(/^\d+\./)) {
       doc.font('CN').fontSize(10);
-      doc.text(text, 55, doc.y + 0.3);
+      doc.text(line, 55, doc.y);
       continue;
     }
-    if (text.match(/^\*\*.*\*\*$/)) {
+
+    if (line.match(/^\*\*.*\*\*$/)) {
       doc.font('CN-Bold').fontSize(11);
-      doc.text(text.replace(/\*\*/g, ''));
-      doc.moveDown(0.3); continue;
-    }
-    if (text.includes('**')) {
-      doc.font('CN').fontSize(10);
-      doc.text(text.replace(/\*\*/g, ''), 50, doc.y + 0.5, { width: 495 });
+      doc.text(line.replace(/\*\*/g, ''));
+      doc.moveDown(0.3);
       continue;
     }
-    if (text.trim()) {
+
+    if (line.trim()) {
       doc.font('CN').fontSize(10);
-      doc.text(text, 50, doc.y + 0.5, { width: 495 });
+      doc.text(line.replace(/\*\*/g, ''), 50, doc.y, { width: 495 });
     } else {
       doc.moveDown(0.2);
     }
@@ -206,9 +200,7 @@ function generateManualPDF(inputFile, outputFile) {
   console.log(`Generated: ${outputFile}`);
 }
 
-// Generate all PDFs
 generateSourcePDF(frontFiles, '源码前30页.pdf', false);
 generateSourcePDF(backFiles, '源码后30页.pdf', true);
 generateManualPDF('用户操作手册.md', '用户操作手册.pdf');
-
 console.log('Done.');

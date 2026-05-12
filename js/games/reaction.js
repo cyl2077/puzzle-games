@@ -1,4 +1,14 @@
-// === Reaction Time (反应速度测试) ===
+/**
+ * Reaction Time (反应速度测试)
+ * @author ch2077
+ * @version 1.0.3
+ * @date 2025-02-01 初版
+ * @date 2025-03-08 加了pre-click检测，防止预判提前点击
+ *
+ * 屏幕变绿后尽快点击，测试反应速度（ms）
+ * 状态机：idle→waiting(random delay)→ready→clicked
+ * 记录最近5次成绩+最佳成绩
+ */
 const ReactionGame = {
   state: 'idle', // idle, waiting, ready, clicked
   startTime: 0,

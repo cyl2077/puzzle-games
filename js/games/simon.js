@@ -1,4 +1,14 @@
-// === Simon Says (记忆灯) ===
+/**
+ * Simon Says (记忆灯)
+ * @author ch2077
+ * @version 1.0.2
+ * @date 2025-03-25 初版
+ * @date 2025-04-02 优化闪烁间隔，加长序列时每步间隔递减
+ *
+ * 经典记忆灯游戏，记住灯光序列并按顺序复现
+ * 每轮序列长度+1，最长可无限挑战，错误即结束
+ * 4色灯：红蓝绿黄，视觉+（伪）音效提示
+ */
 const SimonGame = {
   sequence: [], playerIdx: 0,
   showingSequence: false,

@@ -1,7 +1,18 @@
-// === 2048 Game ===
+/**
+ * 2048 Game
+ * @author ch2077
+ * @version 1.5.3
+ * @date 2025-03-08 修复滑动失效问题
+ * @date 2025-05-02 增加鼠标拖拽支持(桌面端也能拖了)
+ *
+ * 经典2048数字合并，4x4网格
+ * 滑动算法：每行/列独立slide，先滤0再合并相邻相等，末尾补0
+ * 移动端用touch start/end坐标差判断方向，阈值20px避免误触
+ * desktop端加了mousedown/mouseup拖拽，阈值15px
+ */
 const Game2048 = {
-  grid: [],
-  score: 0,
+  grid: [],       // 4x4数字矩阵
+  score: 0,       // 当前得分（合并时累加）
   container: null,
   statsCb: null,
   boardEl: null,

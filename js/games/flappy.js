@@ -1,4 +1,14 @@
-// === Flappy Bird Clone (小鸟飞飞) ===
+/**
+ * Flappy Bird Clone (小鸟飞飞)
+ * @author ch2077
+ * @version 1.2.1
+ * @date 2025-02-05 初版
+ * @date 2025-03-18 调整重力参数，手感更接近原版
+ *
+ * 经典Flappy Bird玩法，点击让小鸟飞起穿过管道
+ * 物理：每帧vy+=0.4重力，点击vy=-6上冲
+ * 管道间隔130px，生成频率每80帧一对
+ */
 const FlappyGame = {
   canvas: null,
   ctx: null,

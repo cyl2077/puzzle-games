@@ -1,5 +1,17 @@
-// === Wordle (猜单词) ===
+/**
+ * Wordle (猜单词)
+ * @author ch2077
+ * @version 1.1.0
+ * @date 2025-03-20 初版完成
+ * @date 2025-04-05 扩展词库到50个词
+ *
+ * 6次机会猜5字母英文单词
+ * 绿色=位置正确，黄色=字母存在但位置错，灰色=不在单词中
+ * 键盘映射支持物理键盘+触屏虚拟键盘
+ * 词库精选50个常见5字母词，后面可以继续加
+ */
 const WordleGame = {
+  // 词库：选的都是常见词，剔除了生僻词和复数形式
   words: ['apple','brain','crane','dance','eagle','flame','grape','heart','image','joker',
     'knife','lemon','magic','noble','ocean','pearl','queen','raven','stone','tiger',
     'unity','vivid','whale','xenon','youth','zebra','bloom','cloud','dream','earth',

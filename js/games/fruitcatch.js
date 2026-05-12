@@ -1,4 +1,14 @@
-// === Fruit Catch (接水果) ===
+/**
+ * Fruit Catch (接水果)
+ * @author ch2077
+ * @version 1.1.2
+ * @date 2025-02-28 初版
+ * @date 2025-03-22 加了炸弹惩罚+生命系统
+ *
+ * 滑动篮子接住掉落水果，避开炸弹
+ * 水果8种emoji随机，炸弹概率15%，速度随时间递增
+ * 5条命，漏接水果-1命，接到炸弹直接-1命
+ */
 const FruitCatchGame = {
   canvas: null,
   ctx: null,

@@ -1,11 +1,20 @@
-// === Breakout (打砖块) - 5 关闯关模式 ===
+/**
+ * Breakout (打砖块) - 5 关闯关模式
+ * @author ch2077
+ * @version 2.2.0
+ * @date 2025-04-18 加入5关闯关，每关砖块排布不同
+ * @date 2025-05-03 调了挡板弹球偏移算法，hitPos映射dx更自然
+ *
+ * 经典打砖块游戏，挡板反弹小球消除所有砖块即过关
+ * 反弹角度由球击中挡板的位置决定（-0.5~0.5映射到-4~4）
+ * 每关砖块行数、列数、球速递增，第5关7行10列+超高速
+ * 生命3条，掉球扣命，命尽game over
+ */
 const BreakoutGame = {
-  canvas: null,
-  ctx: null,
-  width: 480,
-  height: 320,
-  paddle: { x: 200, w: 80, h: 12 },
-  ball: { x: 240, y: 280, r: 6, dx: 3, dy: -3 },
+  canvas: null, ctx: null,
+  width: 480, height: 320,
+  paddle: { x: 200, w: 80, h: 12 },  // 挡板宽80高12
+  ball: { x: 240, y: 280, r: 6, dx: 3, dy: -3 },  // 球半径6，初始斜上
   bricks: [],
   score: 0,
   lives: 3,

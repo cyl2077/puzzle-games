@@ -1,8 +1,21 @@
-// === Tetris Game ===
+/**
+ * Tetris Game (俄罗斯方块)
+ * @author ch2077
+ * @version 2.0.2
+ * @date 2025-02-28 修复旋转碰撞检测bug
+ * @date 2025-04-22 新增触屏按钮操控
+ *
+ * 经典俄罗斯方块实现，7种标准tetromino
+ * 旋转算法：矩阵转置后水平翻转（顺时针90度）
+ * 注意：I方块(长条)旋转时容易卡边界，加了墙踢逻辑
+ */
 const TetrisGame = {
-  cols: 10, rows: 20, board: [],
-  canvas: null, ctx: null, tileSize: 24,
+  cols: 10, rows: 20, board: [],  // 10x20标准大小
+  canvas: null, ctx: null, tileSize: 24, // 每格24px
   piece: null, piecePos: { x: 0, y: 0 },
+
+  // 7种标准方块定义，用1/0矩阵表示形状
+  // 颜色参考NES版俄罗斯方块配色
   score: 0, level: 1, lines: 0, speed: 500,
   loop: null, running: false,
   container: null, statsCb: null,

@@ -1,8 +1,18 @@
-// === Minesweeper Game ===
+/**
+ * Minesweeper Game (扫雷)
+ * @author ch2077
+ * @version 1.3.1
+ * @date 2025-01-20 初版
+ * @date 2025-03-12 修复双击数字自动揭开的bug
+ *
+ * 经典扫雷，9x9初级难度，10个雷
+ * 左键翻开，右键插旗，双击数字自动揭开周围（需满足旗数条件）
+ * 首次点击保证不踩雷（安全区生成逻辑见initGrid）
+ */
 const MinesweeperGame = {
-  rows: 9,
-  cols: 9,
-  mines: 10,
+  rows: 9,     // 行数
+  cols: 9,     // 列数
+  mines: 10,   // 雷数（标准初级难度）
   grid: [],
   revealed: [],
   flagged: [],

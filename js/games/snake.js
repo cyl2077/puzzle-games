@@ -1,9 +1,20 @@
-// === Snake Game (贪吃蛇) - 5 关闯关模式 ===
+/**
+ * Snake Game (贪吃蛇) - 5 关闯关模式
+ * @author ch2077
+ * @version 2.1.0
+ * @date 2025-03-15 重构移动端适配
+ * @date 2025-04-20 增加闯关系统
+ *
+ * 经典贪吃蛇实现，采用tile-based网格移动
+ * 移动端做了swipe手势 + D-Pad双适配，防止方向误判加了15px死区
+ * 速度随关卡递增，初始100ms/步，每关降低约15-20ms
+ */
 const SnakeGame = {
   canvas: null, ctx: null,
-  tileCount: 20, tileSize: 0,
+  tileCount: 20, tileSize: 0,  // 20x20格，地图尺寸自适应
   snake: [], food: null,
   dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
+  // 注意：nextDir用于缓冲输入，防止同一帧内两次反向导致自撞
   score: 0, speed: 100,
   loop: null, running: false,
   container: null, statsCb: null,

@@ -1,4 +1,14 @@
-// === Sliding Puzzle (15-Puzzle) ===
+/**
+ * Sliding Puzzle (15-Puzzle / 滑块拼图)
+ * @author ch2077
+ * @version 1.1.0
+ * @date 2025-02-15 加入逆序数判定可解性
+ * @date 2025-02-20 增加shuffle时的可解校验，防止生成死局
+ *
+ * 4x4十五拼图，数字1-15+空位
+ * 点击与空位相邻的滑块移动，直到排列为1-15顺序
+ * 随机打乱时用逆序对数判断可解性，保证不会生成无解盘面
+ */
 const PuzzleGame = {
   size: 4,
   tiles: [],

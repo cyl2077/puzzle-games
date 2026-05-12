@@ -1,4 +1,14 @@
-// === Whack-a-Mole (打地鼠) - 5 关闯关模式 ===
+/**
+ * Whack-a-Mole (打地鼠) - 5 关闯关模式
+ * @author ch2077
+ * @version 2.0.2
+ * @date 2025-04-22 加入闯关系统，目标分数+时间限制
+ * @date 2025-05-01 优化双地鼠概率随关卡递增
+ *
+ * 30秒限时打地鼠，9个洞口随机出没
+ * 每一关有目标分数，达标→过关，超时→结束
+ * 出洞速度随关卡加速：1000ms→380ms
+ */
 const WhackGame = {
   score: 0, misses: 0,
   moles: Array(9).fill(false),

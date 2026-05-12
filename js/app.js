@@ -1,4 +1,13 @@
-// === App Shell ===
+/**
+ * 益智小游戏合集 - App Shell
+ * @author ch2077
+ * @version 3.2.0
+ * @date 2025-05-10 整合21款游戏
+ *
+ * 游戏框架：模块化架构，每个游戏独立js模块
+ * 统一生命周期：init(container, statsCb) → destroy()
+ * 统计回调：updateStats({key:value}) 刷新顶部状态栏
+ */
 const app = {
   currentGame: null,
   games: [

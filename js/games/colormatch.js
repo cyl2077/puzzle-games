@@ -1,4 +1,14 @@
-// === Color Match / Stroop Test (颜色匹配) ===
+/**
+ * Color Match / Stroop Test (颜色匹配)
+ * @author ch2077
+ * @version 1.0.4
+ * @date 2025-02-12 初版（基于Stroop效应）
+ * @date 2025-03-10 30秒限时+连击加成
+ *
+ * 判断文字颜色是否与文字内容一致，30秒限时
+ * Stroop效应：文字说"红"但显示蓝色→反应变慢
+ * 连击(Streak)计次，最高连击记录保存
+ */
 const ColorMatchGame = {
   colorName: '',
   displayColor: '',

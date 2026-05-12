@@ -1,4 +1,14 @@
-// === Tic-Tac-Toe (井字棋) ===
+/**
+ * Tic-Tac-Toe (井字棋)
+ * @author ch2077
+ * @version 1.0.3
+ * @date 2025-01-25 初版
+ * @date 2025-02-18 AI改用minimax，从随机落子升级为不可战胜
+ *
+ * 3x3井字棋，玩家X先手vs AI(O)
+ * AI使用minimax递归搜索最优解，保证至少平局
+ * 记录胜负平统计（wins/losses/draws）
+ */
 const TicTacToeGame = {
   board: [],
   player: 'X',

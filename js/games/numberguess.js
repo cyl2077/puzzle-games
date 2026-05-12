@@ -1,4 +1,13 @@
-// === Number Guessing (数字猜谜) ===
+/**
+ * Number Guessing (数字猜谜)
+ * @author ch2077
+ * @version 1.0.2
+ * @date 2025-01-28 初版
+ * @date 2025-02-08 范围提示改为动态区间显示
+ *
+ * 猜1-100随机数，每次猜完提示"大了/小了"并缩小范围
+ * 计次统计，提供重置重新开局
+ */
 const NumberGuessGame = {
   target: 0,
   attempts: 0,

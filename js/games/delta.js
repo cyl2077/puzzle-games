@@ -1,4 +1,14 @@
-// === 三角洲行动随机配装 (Delta Force Randomizer) ===
+/**
+ * 三角洲行动随机配装器 (Delta Force Randomizer)
+ * @author ch2077
+ * @version 2.3.0
+ * @date 2025-04-02 全面更新真实游戏物品数据
+ * @date 2025-04-15 加入动画效果（shake+pop）
+ *
+ * 随机生成三角洲行动全套配装：地图、干员、枪械、护甲、头盔
+ * 数据来源：官方wiki+玩家社区，涵盖了绝密/机密各级别装备
+ * 每个槽位独立滚动随机，支持单独重新roll某个槽位
+ */
 const DeltaGame = {
   slots: {
     map:   { name:'地图', icon:'🗺️', items:[

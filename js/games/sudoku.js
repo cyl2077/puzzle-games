@@ -1,4 +1,14 @@
-// === Sudoku (数独) ===
+/**
+ * Sudoku (数独)
+ * @author ch2077
+ * @version 1.2.0
+ * @date 2025-02-10 改用回溯法生成完整数独+挖空
+ * @date 2025-03-05 修了难度选择时generate卡死的问题
+ *
+ * 9x9标准数独，3种难度（easy/medium/hard）
+ * 生成算法：回溯法递归生成完整解，再按难度挖掉若干格
+ * 验证：行/列/宫各1-9不重复
+ */
 const SudokuGame = {
   board: [],
   solution: [],

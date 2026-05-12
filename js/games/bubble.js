@@ -1,8 +1,20 @@
-// === Bubble Shooter (泡泡射手) - 5 关闯关模式 ===
+/**
+ * Bubble Shooter (泡泡射手) - 5 关闯关模式
+ * @author ch2077
+ * @version 3.1.0
+ * @date 2025-04-28 完全重写匹配逻辑，改为网格邻接
+ * @date 2025-05-08 修复spawnBubble颜色不在剩余泡泡中的bug
+ *
+ * 经典泡泡龙玩法，hex grid布局（偶数行缩进半个格子）
+ * 匹配检测：flood fill按六角邻接找同色连通分量，≥3消除
+ * 浮动泡泡检测：BFS从顶行遍历，不连通的掉落并加分
+ * 关键修复：spawnBubble现在只从剩余泡泡颜色池中随机
+ */
 const BubbleGame = {
   canvas: null, ctx: null,
   bubbles: [], shooter: { x: 0, y: 0 },
   currentBubble: null,
+  // 六色泡泡，按关卡解锁颜色数（4→4→5→5→6）
   allColors: ['#ff6b6b','#ffa726','#ffd93d','#00d2a0','#54a0ff','#a29bfe'],
   colors: [],
   score: 0, shots: 0,

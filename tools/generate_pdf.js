@@ -40,7 +40,7 @@ const backFiles = [
 function generateSourcePDF(files, outputFile, reverse) {
   const doc = new PDFDocument({
     size: 'A4',
-    margins: { top: 20, bottom: 25, left: 25, right: 25 }
+    margins: { top: 24, bottom: 24, left: 28, right: 28 }
   });
 
   const outPath = path.join(docsDir, outputFile);
@@ -49,62 +49,60 @@ function generateSourcePDF(files, outputFile, reverse) {
   if (reverse) files = [...files].reverse();
 
   const charsPerLine = 82;
-  const linesPerPage = 55;
+  const linesPerPage = 56;
 
   let allLines = [];
-
   for (const file of files) {
     const filePath = path.join(rootDir, file.path);
     if (!fs.existsSync(filePath)) { continue; }
     const content = fs.readFileSync(filePath, 'utf-8');
-    const codeLines = content.split('\n');
-    allLines.push('');
+    allLines.push(' ');
     allLines.push(`// === ${file.desc} (${file.path}) ===`);
-    allLines.push('');
-    for (const l of codeLines) allLines.push(l);
+    allLines.push(' ');
+    for (const l of content.split('\n')) allLines.push(l);
   }
 
   let pageNum = 1;
-  let lineIdx = 0;
+  let lineCount = 0;
 
-  while (lineIdx < allLines.length) {
-    // Page header
+  function addPageFooter() {
     doc.font('Times-Roman').fontSize(7);
-    doc.text('Puzzle Games Collection  V3.2', 25, 12, { width: 545, align: 'left' });
+    const pageW = doc.page.width;
+    const pageH = doc.page.height;
+    doc.text(`Page ${pageNum}`, 0, pageH - 30, { width: pageW, align: 'center' });
+  }
 
-    // Content area starts
-    doc.font('Courier').fontSize(7);
-    let y = 28;
-    const bottomY = doc.page.height - 22;
+  // First page header
+  doc.font('Times-Roman').fontSize(7);
+  doc.text('Puzzle Games Collection  V3.2', { align: 'left' });
+  doc.moveDown(0.3);
+  doc.font('Courier').fontSize(7);
 
-    for (let i = 0; i < linesPerPage && lineIdx < allLines.length; i++, lineIdx++) {
-      const raw = allLines[lineIdx] || ' ';
-      // Wrap long lines
-      let text = raw.length > charsPerLine ? raw.substring(0, charsPerLine) : raw;
-      let remaining = raw.length > charsPerLine ? raw.substring(charsPerLine) : '';
-
-      doc.text(text, 25, y, { width: 545, lineBreak: false });
-      y += 9.5;
-
-      while (remaining.length > 0 && i < linesPerPage - 1) {
-        i++;
-        text = remaining.length > charsPerLine ? remaining.substring(0, charsPerLine) : remaining;
-        remaining = remaining.length > charsPerLine ? remaining.substring(charsPerLine) : '';
-        doc.text(text, 25, y, { width: 545, lineBreak: false });
-        y += 9.5;
-      }
+  for (let i = 0; i < allLines.length; i++) {
+    const raw = allLines[i] || ' ';
+    let text = raw;
+    while (text.length > charsPerLine) {
+      doc.text(text.substring(0, charsPerLine), { lineBreak: false });
+      text = text.substring(charsPerLine);
+      lineCount++;
     }
+    doc.text(text, { lineBreak: false });
+    doc.moveDown(0.05);
+    lineCount++;
 
-    // Page footer
-    doc.font('Times-Roman').fontSize(7);
-    doc.text(`Page ${pageNum}`, 25, doc.page.height - 18, { width: 545, align: 'center' });
-
-    if (lineIdx < allLines.length) {
+    if (lineCount >= linesPerPage && i < allLines.length - 1) {
+      addPageFooter();
       doc.addPage();
       pageNum++;
+      lineCount = 0;
+      doc.font('Times-Roman').fontSize(7);
+      doc.text('Puzzle Games Collection  V3.2', { align: 'left' });
+      doc.moveDown(0.3);
+      doc.font('Courier').fontSize(7);
     }
   }
 
+  addPageFooter();
   doc.end();
   console.log(`Generated: ${outputFile} (${pageNum} pages)`);
 }
